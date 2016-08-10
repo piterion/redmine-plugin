@@ -2,4 +2,7 @@
   <f:entry field="repositoryId" title="${%Redmine repository identifier}" help="/plugin/redmine/help-repo.html">
     <f:textbox />
   </f:entry>
+  <f:entry field="repositoryContainsBranchInfo" title="${%The repository in Redmine contains already branch information}">
+    <f:checkbox />
+  </f:entry>
 </j:jelly>

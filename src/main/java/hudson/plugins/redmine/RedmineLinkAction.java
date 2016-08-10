@@ -23,6 +23,9 @@ public class RedmineLinkAction implements Action {
     }
 
     public String getDisplayName() {
+    	if(prop.projectName != null && prop.projectName.contains("$")) {    		
+			return "Redmine";
+		}
         return "Redmine - " + prop.projectName;
     }
 
@@ -31,7 +34,10 @@ public class RedmineLinkAction implements Action {
     	if (redmineConfig == null) {
     		return null;
     	} else {
-    		return redmineConfig.baseUrl + "projects/" + prop.projectName;
+    		if(prop.projectName != null && prop.projectName.contains("$")) {    		
+    			return redmineConfig.baseUrl + "projects/";
+    		}
+    		return redmineConfig.baseUrl + "projects/" + prop.projectName; 
     	}
 	}
 }

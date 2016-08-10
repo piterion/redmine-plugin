@@ -3,7 +3,6 @@ package hudson.plugins.redmine;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
-
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import hudson.Extension;
@@ -23,10 +22,12 @@ import hudson.scm.SubversionChangeLogSet.Path;
  */
 public class RedmineRepositoryBrowser extends SubversionRepositoryBrowser {
 	private final String repositoryId; 
+	private final boolean repositoryContainsBranchInfo;
 
 	@DataBoundConstructor
-	public RedmineRepositoryBrowser(String repositoryId) {
+	public RedmineRepositoryBrowser(String repositoryId, boolean repositoryContainsBranchInfo) {
 		this.repositoryId = repositoryId;
+		this.repositoryContainsBranchInfo = repositoryContainsBranchInfo;
 	}
 	
 	/**
@@ -34,7 +35,7 @@ public class RedmineRepositoryBrowser extends SubversionRepositoryBrowser {
 	 */
 	@Deprecated
 	public RedmineRepositoryBrowser() {
-		this(null);
+		this(null, false);
 	}
 	
 	public String getRepositoryId() {
@@ -57,8 +58,8 @@ public class RedmineRepositoryBrowser extends SubversionRepositoryBrowser {
 		} else {
 			URL baseUrl = getRedmineProjectURL(path.getLogEntry());
 			String id = getRepositoryId(path.getLogEntry());
-
-			return new URL(baseUrl, "repository" + id + "/diff" + filePath + "?rev=" + revision);
+			
+			return new URL(ParameterUtil.replaceBuildParameters(baseUrl.toString()+ "repository" + id + "/diff" + filePath + "?rev=" + revision, path.getLogEntry().getParent().build));
 		}
 	}
 
@@ -76,7 +77,7 @@ public class RedmineRepositoryBrowser extends SubversionRepositoryBrowser {
 			String id = getRepositoryId(path.getLogEntry());
 			int revision = path.getLogEntry().getRevision();
 
-			return baseUrl == null ? null : new URL(baseUrl, "repository"+ id + "/revisions/"+ revision+"/entry" +filePath);
+			return baseUrl == null ? null : new URL(ParameterUtil.replaceBuildParameters(baseUrl.toString()+ "repository"+ id + "/revisions/"+ revision+"/entry" +filePath, path.getLogEntry().getParent().build));
 		}
 	}
 
@@ -89,7 +90,8 @@ public class RedmineRepositoryBrowser extends SubversionRepositoryBrowser {
 		} else {
 			URL baseUrl = getRedmineProjectURL(changeSet);
 			String id = getRepositoryId(changeSet);
-			return baseUrl == null ? null : new URL(baseUrl, "repository" + id + "/revisions/" + changeSet.getRevision());
+
+			return baseUrl == null ? null : new URL(ParameterUtil.replaceBuildParameters(baseUrl.toString() + "repository" + id + "/revisions/" + changeSet.getRevision(), changeSet.getParent().build));
 		}
 	}
 
@@ -167,16 +169,40 @@ public class RedmineRepositoryBrowser extends SubversionRepositoryBrowser {
 				}
 			}
 		} else { 
+			if(repositoryContainsBranchInfo) {
+				String[] filePaths = fileFullPath.split("/");
+				filePath = "/";
+				
+				int startIndex;
+				if(filePaths.length > 2 && "trunk".equalsIgnoreCase(filePaths[1])) {
+					startIndex = 2;
+				}
+				else {
+					startIndex=3;
+				}
+				
+				for(int i = startIndex ; i < filePaths.length; i++) {					
+					filePath = filePath + filePaths[i];
+					if(i != filePaths.length - 1) {
+						filePath = filePath + "/";
+					}
+				}	
+			}
+			else {
 			filePath = fileFullPath;
+			}
 		}
 		return filePath;
-
 	}
 	
 	private boolean isVersionBefore090(LogEntry logEntry) {
 		AbstractProject<?,?> p = (AbstractProject<?,?>)logEntry.getParent().build.getProject();
 		RedmineProjectProperty rpp = p.getProperty(RedmineProjectProperty.class);
 		return VersionUtil.isVersionBefore090(rpp.getRedmineWebsite().versionNumber);
+	}
+	
+	public boolean isRepositoryContainsBranchInfo() {
+		return repositoryContainsBranchInfo;
 	}
 
 
